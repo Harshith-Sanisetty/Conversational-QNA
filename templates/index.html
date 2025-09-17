@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conversational Memory Network</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1> Conversational Memory Network</h1>
+            <p class="subtitle">AI chatbot with memory and context awareness</p>
+        </header>
+
+        
+        <div id="welcome-screen" class="welcome">
+            <div class="welcome-content">
+                <h2>Welcome to Mia!</h2>
+                <p>I'm an AI assistant with memory capabilities. I remember our conversations to provide better, more contextual responses.</p>
+                
+                <div class="features">
+                    <div class="feature">
+                        <span class="icon">💬</span>
+                        <h3>Context Aware</h3>
+                        <p>I remember what we talked about</p>
+                    </div>
+                    <div class="feature">
+                        <span class="icon">🔍</span>
+                        <h3>Memory Search</h3>
+                        <p>Search past conversations with /search</p>
+                    </div>
+                    <div class="feature">
+                        <span class="icon">📊</span>
+                        <h3>Smart Analysis</h3>
+                        <p>I analyze topics and sentiment</p>
+                    </div>
+                </div>
+
+                <form id="start-form">
+                    <input type="text" id="user-name" placeholder="Enter your name (optional)" maxlength="50">
+                    <button type="submit">Start Chatting</button>
+                </form>
+            </div>
+        </div>
+
+       
+        <div id="chat-interface" class="hidden">
+            <div class="chat-header">
+                <div class="user-info">
+                    <span id="user-display">User</span>
+                    <small id="session-info">New session</small>
+                </div>
+                <div class="chat-controls">
+                    <button id="summary-btn" title="Get conversation summary">📊</button>
+                    <button id="clear-btn" title="New chat session">🗑️</button>
+                </div>
+            </div>
+
+            <div id="chat-messages" class="messages"></div>
+
+            <div class="input-area">
+                <div class="commands-hint">
+                    💡 Commands: <code>/search [topic]</code> • <code>/summary</code>
+                </div>
+                <div class="input-container">
+                    <input type="text" id="message-input" placeholder="Type your message..." maxlength="500">
+                    <button id="send-btn" disabled>Send</button>
+                </div>
+                <div id="typing-indicator" class="hidden">Mia is thinking...</div>
+            </div>
+        </div>
+
+        
+        <div id="analysis-panel" class="analysis hidden">
+            <h4>Message Analysis</h4>
+            <div class="analysis-content">
+                <div class="analysis-item">
+                    <label>Topic:</label>
+                    <span id="topic-value">-</span>
+                </div>
+                <div class="analysis-item">
+                    <label>Sentiment:</label>
+                    <span id="sentiment-value">-</span>
+                </div>
+                <div class="analysis-item">
+                    <label>Keywords:</label>
+                    <span id="keywords-value">-</span>
+                </div>
+                <div class="analysis-item">
+                    <label>Context Score:</label>
+                    <span id="context-score">-</span>
+                </div>
+            </div>
+            <button id="toggle-analysis">Hide Analysis</button>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+</body>
+</html>
