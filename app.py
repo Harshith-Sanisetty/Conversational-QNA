@@ -1,56 +1,99 @@
-import streamlit as st
-import openai
-from langchain_openai import ChatOpenAI
-from langchain_core.output_parsers import StrOutputParser
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_community.llms import Ollama
+from flask import Flask, render_template, request, jsonify, session
+from chat_bot import ConversationalBot
+from config import Config
 import os
 
-import os
-from dotenv import load_dotenv
-load_dotenv()
+app = Flask(__name__)
+app.secret_key = Config.SECRET_KEY
+bot = ConversationalBot()
 
-## Langsmith Tracking
-os.environ["LANGCHAIN_API_KEY"]=os.getenv("LANGCHAIN_API_KEY")
-os.environ["LANGCHAIN_TRACING_V2"]="true"
-os.environ["LANGCHAIN_PROJECT"]="Simple Q&A Chatbot With Ollama"
+@app.route('/')
+def home():
+    return render_template('index.html')
 
-## Prompt Template
-prompt=ChatPromptTemplate.from_messages(
-    [
-        ("system","You are a helpful massistant . Please  repsonse to the user queries"),
-        ("user","Question:{question}")
-    ]
-)
+@app.route('/start', methods=['POST'])
+def start():
+    d = request.get_json()
+    uname = d.get('uname', 'User')
+    sid, greet = bot.start_conversation(uname)
+    session['sid'] = sid
+    session['uname'] = uname
+    return jsonify({'ok': True, 'sid': sid, 'msg': greet})
 
-def generate_response(question,llm,temperature,max_tokens):
-    llm=Ollama(model=llm)
-    output_parser=StrOutputParser()
-    chain=prompt|llm|output_parser
-    answer=chain.invoke({'question':question})
-    return answer
+@app.route('/chat', methods=['POST'])
+def chat():
+    try:
+        d = request.get_json()
+        msg = d.get('msg', '').strip()
+        if not msg:
+            return jsonify({'ok': False, 'err': 'Empty message'})
+        
+        sid = session.get('sid')
+        if not sid:
+            return jsonify({'ok': False, 'err': 'No active session'})
 
-## #Title of the app
-st.title("Enhanced Q&A Chatbot With OpenAI")
+        if msg.lower().startswith('/search '):
+            q = msg[8:]
+            resp = bot.search_past_conversations(sid, q)
+            return jsonify({'ok': True, 'msg': resp, 'type': 'search'})
+        
+        elif msg.lower() == '/summary':
+            resp = bot.get_conversation_summary(sid)
+            return jsonify({'ok': True, 'msg': resp, 'type': 'summary'})
 
+        resp, an = bot.generate_response(msg, sid)
+        return jsonify({
+            'ok': True,
+            'msg': resp,
+            'an': {
+                'topic': an['topic'],
+                'mood': an['sentiment'],
+                'kws': an['keywords'],
+                'score': an['context_score']
+            }
+        })
+    except Exception as e:
+        return jsonify({'ok': False, 'err': str(e)})
 
-## Select the OpenAI model
-llm=st.sidebar.selectbox("Select Open Source model",["mistral"])
+@app.route('/info', methods=['GET'])
+def info():
+    sid = session.get('sid')
+    uname = session.get('uname', 'User')
+    if not sid:
+        return jsonify({'ok': False, 'err': 'No active session'})
+    
+    summ = bot.get_conversation_summary(sid)
+    return jsonify({
+        'ok': True, 
+        'sid': sid, 
+        'uname': uname, 
+        'summ': summ
+    })
 
-## Adjust response parameter
-temperature=st.sidebar.slider("Temperature",min_value=0.0,max_value=1.0,value=0.7)
-max_tokens = st.sidebar.slider("Max Tokens", min_value=50, max_value=300, value=150)
+@app.route('/clear', methods=['POST'])
+def clear():
+    session.clear()
+    return jsonify({'ok': True, 'msg': 'Session cleared'})
 
-## MAin interface for user input
-st.write("Goe ahead and ask any question")
-user_input=st.text_input("You:")
+@app.errorhandler(404)
+def err404(e):
+    return jsonify({'ok': False, 'err': 'Endpoint not found'}), 404
 
+@app.errorhandler(500)
+def err500(e):
+    return jsonify({'ok': False, 'err': 'Internal server error'}), 500
 
-
-if user_input :
-    response=generate_response(user_input,llm,temperature,max_tokens)
-    st.write(response)
-else:
-    st.write("Please provide the user input")
-
-
+if __name__ == '__main__':
+    os.makedirs('database', exist_ok=True)
+    os.makedirs('static/css', exist_ok=True)
+    os.makedirs('static/js', exist_ok=True)
+    os.makedirs('templates', exist_ok=True)
+    
+    print(f"Starting {Config.BOT_NAME}...")
+    print(f"URL: http://localhost:{Config.PORT}")
+    
+    app.run(
+        host=Config.HOST,
+        port=Config.PORT,
+        debug=Config.DEBUG
+    )
